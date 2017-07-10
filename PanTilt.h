@@ -176,7 +176,7 @@ class DPanTilt : public DRoboClawFS
       bool PanToCnt(int32_t nCount, int32_t nSpeed, uint32_t uAccel, uint32_t uDecel, bool bImmediate = true) const
          {
          nCount = boost::algorithm::clamp(nCount, m_Parms[m_nPanMotor].m_nMin, m_Parms[m_nPanMotor].m_nMax);
-         return ((this->*m_Parms[m_nPanMotor].m_DriveMotorFunc)(nSpeed, uAccel, uDecel, nCount, bImmediate));
+         return (DriveMotorSignedSpeedAccelDecelPos(m_nPanMotor, nSpeed, uAccel, uDecel, nCount, bImmediate));
          }
 
       bool TiltToDeg(double dDegrees, int32_t nSpeed, uint32_t uAccel, uint32_t uDecel, bool bImmediate = true) const
@@ -192,7 +192,7 @@ class DPanTilt : public DRoboClawFS
       bool TiltToCnt(int32_t nCount, int32_t nSpeed, uint32_t uAccel, uint32_t uDecel, bool bImmediate = true) const
          {
          nCount = boost::algorithm::clamp(nCount, m_Parms[m_nTiltMotor].m_nMin, m_Parms[m_nTiltMotor].m_nMax);
-         return ((this->*m_Parms[m_nTiltMotor].m_DriveMotorFunc)(nSpeed, uAccel, uDecel, nCount, bImmediate));
+         return (DriveMotorSignedSpeedAccelDecelPos(m_nTiltMotor, nSpeed, uAccel, uDecel, nCount, bImmediate));
          }
 
       /*****************************************************************************
@@ -294,7 +294,7 @@ class DPanTilt : public DRoboClawFS
 
       bool ReadPanEncoderCnts(int32_t& nCounts, EncoderStatus& Status) const
          {
-         return ((this->*m_Parms[m_nPanMotor].m_ReadEncoderFunc)(nCounts, Status));
+         return (ReadMotorEncoder(m_nPanMotor, nCounts, Status));
          }
 
       bool ReadTiltEncoderDeg(double& dDegrees, EncoderStatus& Status) const
@@ -321,18 +321,18 @@ class DPanTilt : public DRoboClawFS
 
       bool ReadTiltEncoderCnts(int32_t& nCounts, EncoderStatus& Status) const
          {
-         return ((this->*m_Parms[m_nTiltMotor].m_ReadEncoderFunc)(nCounts, Status));
+         return (ReadMotorEncoder(m_nTiltMotor, nCounts, Status));
          }
 
       // Convenience functions for setting encoder counts by name
       bool SetPanEncoderCounts(int32_t nCounts) const
          {
-         return ((this->*m_Parms[m_nPanMotor].m_SetEncoderFunc)(nCounts));
+         return (SetMotorEncoder(m_nPanMotor, nCounts));
          }
 
       bool SetTiltEncoderCounts(int32_t nCounts) const
          {
-         return ((this->*m_Parms[m_nTiltMotor].m_SetEncoderFunc)(nCounts));
+         return (SetMotorEncoder(m_nTiltMotor, nCounts));
          }
 
       bool ResetPanEncoder() const
@@ -511,11 +511,6 @@ class DPanTilt : public DRoboClawFS
 
 
    protected:
-      // Make using the pointer to member function declarations a bit easier to use
-      using DriveMotorFunc = bool (DRoboClawFS::*)(int32_t, uint32_t, uint32_t, int32_t, bool) const;
-      using ReadEncoderFunc = bool (DRoboClawFS::*)(int32_t&, EncoderStatus&) const;
-      using ReadEncoderSpeedFunc = bool (DRoboClawFS::*)(int32_t&) const;
-      using SetEncoderFunc = bool (DRoboClawFS::*)(int32_t nCount) const;
 
       /*****************************************************************************
       *
@@ -530,8 +525,10 @@ class DPanTilt : public DRoboClawFS
          public:
             AxisParms() = default;
             AxisParms(const AxisParms& src) = delete;
+            AxisParms(const AxisParms&& src) = delete;
             ~AxisParms() = default;
             AxisParms& operator=(const AxisParms& rhs) = delete;
+            AxisParms& operator=(const AxisParms&& rhs) = delete;
 
             // Encoder counts per full revolution
             int32_t m_nCntsPerRev;
@@ -550,11 +547,6 @@ class DPanTilt : public DRoboClawFS
             int32_t m_nDefaultSpeed = 0;
             uint32_t m_uDefaultAccel = 0;
             uint32_t m_uDefaultDecel = 0;
-
-            DriveMotorFunc m_DriveMotorFunc;
-            ReadEncoderFunc m_ReadEncoderFunc;
-            ReadEncoderSpeedFunc m_ReadEncoderSpeedFunc;
-            SetEncoderFunc m_SetEncoderFunc;
          }; // end of class AxisParms
 
       AxisParms m_Parms[2];

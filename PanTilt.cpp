@@ -49,29 +49,13 @@ void DPanTilt::ConfigMotors(EMotorConfig eMotorConfig)
    switch (eMotorConfig)
       {
       case ePan1Tilt2:
-         m_nPanMotor = 0;
-         m_nTiltMotor = 1;
-         m_Parms[m_nPanMotor].m_DriveMotorFunc = &DRoboClawFS::DriveM1SignedSpeedAccelDecelPos;
-         m_Parms[m_nTiltMotor].m_DriveMotorFunc = &DRoboClawFS::DriveM2SignedSpeedAccelDecelPos;
-         m_Parms[m_nPanMotor].m_ReadEncoderFunc = &DRoboClawFS::ReadEncoder1;
-         m_Parms[m_nTiltMotor].m_ReadEncoderFunc = &DRoboClawFS::ReadEncoder2;
-         m_Parms[m_nPanMotor].m_ReadEncoderSpeedFunc = &DRoboClawFS::ReadEncoder1Speed;
-         m_Parms[m_nTiltMotor].m_ReadEncoderSpeedFunc = &DRoboClawFS::ReadEncoder2Speed;
-         m_Parms[m_nPanMotor].m_SetEncoderFunc = &DRoboClawFS::SetEncoder1;
-         m_Parms[m_nTiltMotor].m_SetEncoderFunc = &DRoboClawFS::SetEncoder2;
+         m_nPanMotor = M1;
+         m_nTiltMotor =M2;
          break;
 
       case eTilt1Pan2:
-         m_nPanMotor = 1;
-         m_nTiltMotor = 0;
-         m_Parms[m_nTiltMotor].m_DriveMotorFunc = &DRoboClawFS::DriveM1SignedSpeedAccelDecelPos;
-         m_Parms[m_nPanMotor].m_DriveMotorFunc = &DRoboClawFS::DriveM2SignedSpeedAccelDecelPos;
-         m_Parms[m_nTiltMotor].m_ReadEncoderFunc = &DRoboClawFS::ReadEncoder1;
-         m_Parms[m_nPanMotor].m_ReadEncoderFunc = &DRoboClawFS::ReadEncoder2;
-         m_Parms[m_nTiltMotor].m_ReadEncoderSpeedFunc = &DRoboClawFS::ReadEncoder1Speed;
-         m_Parms[m_nPanMotor].m_ReadEncoderSpeedFunc = &DRoboClawFS::ReadEncoder2Speed;
-         m_Parms[m_nTiltMotor].m_SetEncoderFunc = &DRoboClawFS::SetEncoder1;
-         m_Parms[m_nPanMotor].m_SetEncoderFunc = &DRoboClawFS::SetEncoder2;
+         m_nPanMotor = M2;
+         m_nTiltMotor = M1;
          break;
 
       default:

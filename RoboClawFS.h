@@ -21,6 +21,12 @@
    speed.  The PID constant functions aren't consistent in the order they're called
    out so that has been made consistent using PID as the natural order.
 
+   There are two forms to the motor control functions.
+   The first specifies M1 or M2 in the function name and uses internally the ECommandCode enumerations.
+   The second form allows programmatically selection the motor by specifying the motor number as a parameter.
+   WARNING:  Users should specify using the provided constants M1 and M2 as these are valued 0 and 1 (NOT 1 and 2) for
+   efficiency.  This will also make YOUR code more readable.
+
    Author: Tim Craig (Druai Robotics) 2017
 */
 
@@ -52,6 +58,13 @@ class DRoboClawFS
    {
    public :
       using CRC16 = uint16_t;
+
+      // Motor constants for those who prefer to specify by motor number
+      // This makes it easy to programmatically switch motors
+      // No checking will be done in the version of functions taking this form
+      // so users going off the reservation will pay the price!!
+      static constexpr uint8_t M1 = 0;
+      static constexpr uint8_t M2 = 1;
 
       // Direction values used by several commands
       enum EDirection : uint8_t { eFwd, eRev };
@@ -333,13 +346,13 @@ class DRoboClawFS
 
       //**  Cmd 0  (0 <= nSpeed <= 127)
       // Verified TTC
-      bool M1Forward(uint8_t nSpeed)
+      bool M1Forward(uint8_t nSpeed) const
          {
          return (SendCompatibilityCmd(ECommandCode::eM1Forward, nSpeed));
          }
 
       //**  Cmd 1  (0 <= nSpeed <= 127)
-      bool M1Backward(uint8_t nSpeed)
+      bool M1Backward(uint8_t nSpeed) const
          {
          return (SendCompatibilityCmd(ECommandCode::eM1Backward, nSpeed));
          }
@@ -386,15 +399,21 @@ class DRoboClawFS
          }
 
       //** Cmd 6  (0 [Full Reverse] <= nSpeed <= 127 [Full Forward])
-      bool M1FDrive7Bit(uint8_t nSpeed) const
+      bool M1Drive7Bit(uint8_t nSpeed) const
          {
          return (SendCompatibilityCmd(ECommandCode::eM1Drive7Bit, nSpeed));
          }
 
       //** Cmd 7  (0 [Full Reverse] <= nSpeed <= 127 [Full Forward])
-      bool M2FDrive7Bit(uint8_t nSpeed) const
+      bool M2Drive7Bit(uint8_t nSpeed) const
          {
          return (SendCompatibilityCmd(ECommandCode::eM2Drive7Bit, nSpeed));
+         }
+
+      //** Cmd 6 & Cmd 7 (0 [Full Reverse] <= nSpeed <= 127 [Full Forward])
+      bool MotorDrive7Bit(uint8_t uMotor, uint8_t nSpeed) const
+         {
+         return (SendCompatibilityCmd(MotorCmd(ECommandCode::eM1Drive7Bit, uMotor), nSpeed));
          }
 
       /***********************************************************************
@@ -456,9 +475,15 @@ class DRoboClawFS
          }
 
       //** Cmd 17 Read Encoder 2
-      bool ReadEncoder2(uint32_t& uCount, EncoderStatus& Status)
+      bool ReadEncoder2(uint32_t& uCount, EncoderStatus& Status) const
          {
          return (ReadEncoder(ECommandCode::eReadEncoder2, uCount, Status));
+         }
+
+      //** Cmd 16 & Cmd 17 Read Encoder
+      bool ReadMotorEncoder(uint8_t uMotor, uint32_t& uCount, EncoderStatus& Status) const
+         {
+         return (ReadEncoder(MotorCmd(ECommandCode::eReadEncoder1, uMotor), uCount, Status));
          }
 
       //** Cmd 16 Read Encoder 1
@@ -473,6 +498,12 @@ class DRoboClawFS
          return (ReadEncoder(ECommandCode::eReadEncoder2, nCount, Status));
          }
 
+      //** Cmd 16 & Cmd 17 Read Encoder
+      bool ReadMotorEncoder(uint8_t uMotor, int32_t& nCount, EncoderStatus& Status) const
+         {
+         return (ReadEncoder(MotorCmd(ECommandCode::eReadEncoder1, uMotor), nCount, Status));
+         }
+
       //** Cmd 18 Read Encoder 1 Speed
       // Value is in counts/second.
       //Manual says filtered so I assume that means a running average
@@ -481,8 +512,7 @@ class DRoboClawFS
       // Verified TTC
       bool ReadEncoder1Speed(int32_t& nSpeed, EDirection& eDirection) const
          {
-         return (ReadEncoderSpeed(ECommandCode::eReadEncoder1Speed,
-            nSpeed, eDirection));
+         return (ReadEncoderSpeed(ECommandCode::eReadEncoder1Speed, nSpeed, eDirection));
          }
 
       // Since Speed is signed, no real need for direction
@@ -508,6 +538,19 @@ class DRoboClawFS
          return (ReadEncoder2Speed(nSpeed, eDirection));
          }
 
+      //** Cmd 18 & Cmd 19
+      bool ReadMotorEncoderSpeed(uint8_t uMotor, int32_t& nSpeed, EDirection& eDirection) const
+         {
+         return (ReadEncoderSpeed(MotorCmd(ECommandCode::eReadEncoder1Speed, uMotor), nSpeed, eDirection));
+         }
+
+      // Since Speed is signed, no real need for direction
+      bool ReadMotorEncoderSpeed(uint8_t uMotor, int32_t& nSpeed) const
+         {
+         EDirection eDirection;
+         return (ReadMotorEncoderSpeed(uMotor, nSpeed, eDirection));
+         }
+
       //** Cmd 20 Reset the Encoder Counters
       // Verified TTC
       bool ResetEncoders() const
@@ -519,24 +562,52 @@ class DRoboClawFS
       // Verified TTC
       bool SetEncoder1(uint32_t uCounts) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eSetEncoder1, uCounts));
+         return (SetEncoder(ECommandCode::eSetEncoder1, uCounts));
          }
 
       bool SetEncoder1(int32_t nCounts) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eSetEncoder1, nCounts));
+         return (SetEncoder(ECommandCode::eSetEncoder1, nCounts));
          }
 
       //** Cmd 23 Set Encoder 2 Value
       // Verified TTC
       bool SetEncoder2(uint32_t uCounts) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eSetEncoder2, uCounts));
+         return (SetEncoder(ECommandCode::eSetEncoder2, uCounts));
          }
 
       bool SetEncoder2(int32_t nCounts) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eSetEncoder2, nCounts));
+         return (SetEncoder(ECommandCode::eSetEncoder2, nCounts));
+         }
+
+      //** Cmd 22 & Cmd 23 Set Encoder Value
+      // Verified TTC
+      bool SetMotorEncoder(uint8_t uMotor, uint32_t uCounts) const
+         {
+         return (SetEncoder(MotorCmd(ECommandCode::eSetEncoder1, uMotor), uCounts));
+         }
+
+      bool SetMotorEncoder(uint8_t uMotor, int32_t nCounts) const
+         {
+         return (SetEncoder(MotorCmd(ECommandCode::eSetEncoder1, uMotor), nCounts));
+         }
+
+      // Convenience functions to reset individual Encoders
+      bool ResetEncoder1() const
+         {
+         return (SetEncoder1(0));
+         }
+
+      bool ResetEncoder2() const
+         {
+         return (SetEncoder2(0));
+         }
+
+      bool ResetMotorEncoder(uint8_t uMotor) const
+         {
+         return (SetMotorEncoder(uMotor, 0));
          }
 
       //** Cmd 30 Read Encoder 1 Raw Speed
@@ -570,6 +641,23 @@ class DRoboClawFS
          {
          EDirection eDirection;
          return (ReadEncoder2RawSpeed(nSpeed, eDirection));
+         }
+
+      //** Cmd 30 & Cmd 31 Read Encoder Raw Speed
+      // Encoder counts per second based on the last 1/300th second
+      // The direction parameter seemed to imply the speed is unsigned.  In
+      // practice it is NOT.  Need to treat it as signed.  Then why direction?
+      // Verified TTC
+      bool ReadMotorEncoderRawSpeed(uint8_t uMotor, int32_t& nSpeed, EDirection& eDirection) const
+         {
+         return (ReadEncoderRawSpeed(MotorCmd(ECommandCode::eReadEncoder1RawSpeed, uMotor), nSpeed, eDirection));
+         }
+
+      // Since Speed is signed, no real need for direction
+      bool ReadMotorEncoderRawSpeed(uint8_t uMotor, int32_t& nSpeed) const
+         {
+         EDirection eDirection;
+         return (ReadMotorEncoderRawSpeed(uMotor, nSpeed, eDirection));
          }
 
       //** Cmd 78 Read Both Encoders
@@ -1000,7 +1088,7 @@ class DRoboClawFS
       // Verified TTC
       bool SetM1MaxCurrentLimit(uint32_t uMaxCurrent, uint32_t uMinCurrent = 0) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eSetM1MaxCurrentLimit,  uMaxCurrent, uMinCurrent));
+         return (SetMaxCurrentLimit(ECommandCode::eSetM1MaxCurrentLimit,  uMaxCurrent, uMinCurrent));
          }
 
       // Set M1 Max Current Limit in Amps
@@ -1016,7 +1104,7 @@ class DRoboClawFS
       // Verified TTC
       bool SetM2MaxCurrentLimit(uint32_t uMaxCurrent, uint32_t uMinCurrent = 0) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eSetM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
+         return (SetMaxCurrentLimit(ECommandCode::eSetM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
          }
 
       // Set M2 Max Current Limit in Amps
@@ -1026,20 +1114,32 @@ class DRoboClawFS
             static_cast<uint32_t>(fMinCurrent * 100.0f)));
          }
 
+      //** Cmds 133 & 134 Set Motor Max Current Limit
+      bool SetMotorMaxCurrentLimit(uint8_t uMotor, uint32_t uMaxCurrent, uint32_t uMinCurrent = 0) const
+         {
+         return (SetMaxCurrentLimit(MotorCmd(ECommandCode::eSetM1MaxCurrentLimit, uMotor),  uMaxCurrent, uMinCurrent));
+         }
+
+      bool SetMotorMaxCurrentLimit(uint8_t uMotor, float fMaxCurrent, float fMinCurrent = 0.0f) const
+         {
+         return (SetMotorMaxCurrentLimit(uMotor, static_cast<uint32_t>(fMaxCurrent * 100.0f),
+            static_cast<uint32_t>(fMinCurrent * 100.0f)));
+         }
+
       //** Cmd 135 Read M1 Max Current Limit
       // Current value is in 10ma units
       // Min Current is always zero
       // Verified TTC
       bool ReadM1MaxCurrentLimit(uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const
          {
-         return (Read2IntegralTypesCRC(ECommandCode::eReadM1MaxCurrentLimit, uMaxCurrent, uMinCurrent));
+         return (ReadMaxCurrentLimit(ECommandCode::eReadM1MaxCurrentLimit, uMaxCurrent, uMinCurrent));
          }
 
       // Convenience to prevent handling an unused value
       bool ReadM1MaxCurrentLimit(uint32_t& uMaxCurrent) const
          {
          uint32_t uMinCurrent;
-         return (Read2IntegralTypesCRC(ECommandCode::eReadM1MaxCurrentLimit, uMaxCurrent, uMinCurrent));
+         return (ReadMaxCurrentLimit(ECommandCode::eReadM1MaxCurrentLimit, uMaxCurrent, uMinCurrent));
          }
 
       // Read M1 Max Current Limit in Amps
@@ -1059,14 +1159,8 @@ class DRoboClawFS
       // Read M1 Max Current Limit in Amps
       bool ReadM1MaxCurrentLimit(float& fMaxCurrent) const
          {
-         uint32_t uMaxCurrent, uMinCurrent;
-         bool bRet = ReadM1MaxCurrentLimit(uMaxCurrent, uMinCurrent);
-         if (bRet)
-            {
-            fMaxCurrent = uMaxCurrent / 100.0f;
-            } // end if
-
-         return (bRet);
+         float fMinCurrent;
+         return (ReadM1MaxCurrentLimit(fMaxCurrent, fMinCurrent));
          }
 
       //** Cmd 136 Read M2 Max Current Limit
@@ -1075,14 +1169,14 @@ class DRoboClawFS
       // Verified TTC
       bool ReadM2MaxCurrentLimit(uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const
          {
-         return (Read2IntegralTypesCRC(ECommandCode::eReadM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
+         return (ReadMaxCurrentLimit(ECommandCode::eReadM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
          }
 
       // Convenience to prevent handling an unused value
       bool ReadM2MaxCurrentLimit(uint32_t& uMaxCurrent) const
          {
          uint32_t uMinCurrent;
-         return (Read2IntegralTypesCRC(ECommandCode::eReadM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
+         return (ReadMaxCurrentLimit(ECommandCode::eReadM2MaxCurrentLimit, uMaxCurrent, uMinCurrent));
          }
 
       // Read M2 Max Current Limit in Amps
@@ -1102,14 +1196,44 @@ class DRoboClawFS
       // Read M2 Max Current Limit in Amps
       bool ReadM2MaxCurrentLimit(float& fMaxCurrent) const
          {
+         float fMinCurrent;
+         return (ReadM2MaxCurrentLimit(fMaxCurrent, fMinCurrent));
+         }
+
+      //** Cmds 135 & 136 Read Max Current Limit for specified Motor
+      bool ReadMotorMaxCurrentLimit(uint8_t uMotor, uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const
+         {
+         return (ReadMaxCurrentLimit(MotorCmd(ECommandCode::eReadM1MaxCurrentLimit, uMotor),
+               uMaxCurrent, uMinCurrent));
+         }
+
+      // Convenience to prevent handling an unused value
+      bool ReadMotorMaxCurrentLimit(uint8_t uMotor, uint32_t& uMaxCurrent) const
+         {
+         uint32_t uMinCurrent;
+         return (ReadMaxCurrentLimit(MotorCmd(ECommandCode::eReadM1MaxCurrentLimit, uMotor),
+               uMaxCurrent, uMinCurrent));
+         }
+
+      // Read Motor Max Current Limit in Amps
+      bool ReadMotorMaxCurrentLimit(uint8_t uMotor, float& fMaxCurrent, float& fMinCurrent) const
+         {
          uint32_t uMaxCurrent, uMinCurrent;
-         bool bRet = ReadM2MaxCurrentLimit(uMaxCurrent, uMinCurrent);
+         bool bRet = ReadMotorMaxCurrentLimit(uMotor, uMaxCurrent, uMinCurrent);
          if (bRet)
             {
             fMaxCurrent = uMaxCurrent / 100.0f;
+            fMinCurrent = uMinCurrent / 100.0f;
             } // end if
 
          return (bRet);
+         }
+
+      // Read Motor Max Current Limit in Amps
+      bool ReadMotorMaxCurrentLimit(uint8_t uMotor, float& fMaxCurrent) const
+         {
+         float fMinCurrent;
+         return (ReadMotorMaxCurrentLimit(uMotor, fMaxCurrent, fMinCurrent));
          }
 
       //** Cmd 148 Set PWM Mode
@@ -1144,7 +1268,7 @@ class DRoboClawFS
       bool SetM1VelocityPIDConstants(uint32_t uP = 0x0010000, uint32_t uI = 0x00008000,
             uint32_t uD = 0x00004000, uint32_t uMaxSpeed = 44000) const
          {
-         return (Send4IntegralTypes0xFF(ECommandCode::eSetM1VelocityPID, uD, uP, uI, uMaxSpeed));
+         return (SetVelocityPIDConstants(ECommandCode::eSetM1VelocityPID, uD, uP, uI, uMaxSpeed));
          }
 
       //** Cmd 29 Set Velocity PID Constants M2
@@ -1153,7 +1277,15 @@ class DRoboClawFS
       bool SetM2VelocityPIDConstants(uint32_t uP = 0x0010000, uint32_t uI = 0x00008000,
             uint32_t uD = 0x00004000, uint32_t uMaxSpeed = 44000) const
          {
-         return (Send4IntegralTypes0xFF(ECommandCode::eSetM2VelocityPID, uD, uP, uI, uMaxSpeed));
+         return (SetVelocityPIDConstants(ECommandCode::eSetM2VelocityPID, uD, uP, uI, uMaxSpeed));
+         }
+
+      // Set Velocity PID Constants by specifying the motor number
+      bool SetMotorVelocityPIDConstants(uint8_t uMotor, uint32_t uP = 0x0010000, uint32_t uI = 0x00008000,
+            uint32_t uD = 0x00004000, uint32_t uMaxSpeed = 44000) const
+         {
+         return (SetVelocityPIDConstants(MotorCmd(ECommandCode::eSetM1VelocityPID, uMotor),
+            uD, uP, uI, uMaxSpeed));
          }
 
       //** Cmd 32 Drive M1 Signed Duty Cycle (No encorders required)
@@ -1161,7 +1293,7 @@ class DRoboClawFS
       // Verified TTC
       bool DriveM1SignedDutyCycle(int16_t nDutyCycle) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eDriveM1SignedDutyCycle, nDutyCycle));
+         return (DriveSignedDutyCycle(ECommandCode::eDriveM1SignedDutyCycle, nDutyCycle));
          }
 
       // Drive M1 Signed Duty Cycle in Percent (-100% to 100%)
@@ -1174,13 +1306,25 @@ class DRoboClawFS
       // Value is -32,767 to +32,767 (-100% to +100%)
       bool DriveM2SignedDutyCycle(int16_t nDutyCycle) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eDriveM2SignedDutyCycle, nDutyCycle));
+         return (DriveSignedDutyCycle(ECommandCode::eDriveM2SignedDutyCycle, nDutyCycle));
          }
 
       // Drive M2 Signed Duty Cycle in Percent (-100% to 100%)
       bool DriveM2SignedDutyCycle(float fDutyCycle) const
          {
          return (DriveM2SignedDutyCycle(static_cast<int16_t>(fDutyCycle * 327.67)));
+         }
+
+      // Drive Signed Duty Cycle by Motor Number
+      bool DriveMotorSignedDutyCycle(uint8_t uMotor, int16_t nDutyCycle) const
+         {
+         return (DriveSignedDutyCycle(MotorCmd(ECommandCode::eDriveM1SignedDutyCycle, uMotor), nDutyCycle));
+         }
+
+      // Drive Signed Duty Cycle in Percent (-100% to 100%) by Motor Number
+      bool DriveSignedDutyCycle(uint8_t uMotor, float fDutyCycle) const
+         {
+         return (DriveMotorSignedDutyCycle(uMotor, static_cast<int16_t>(fDutyCycle * 327.67)));
          }
 
       //** Cmd 34 Drive M1 & M2 Signed Duty Cycle (No encorders required)
@@ -1201,14 +1345,21 @@ class DRoboClawFS
       // Speed is in quadrature pulses/second
       bool DriveM1SignedSpeed(int32_t nSpeed) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eDriveM1SignedSpeed, nSpeed));
+         return (DriveSignedSpeed(ECommandCode::eDriveM1SignedSpeed, nSpeed));
          }
 
       //** Cmd 36 Drive M2 Signed Speed
       // Speed is in quadrature pulses/second
       bool DriveM2SignedSpeed(int32_t nSpeed) const
          {
-         return (Send1IntegralType0xFF(ECommandCode::eDriveM2SignedSpeed, nSpeed));
+         return (DriveSignedSpeed(ECommandCode::eDriveM2SignedSpeed, nSpeed));
+         }
+
+      //** Cmd 35 & 36 Drive Motor Signed Speed
+      // Speed is in quadrature pulses/second
+      bool DriveMotorSignedSpeed(uint8_t uMotor, int32_t nSpeed) const
+         {
+         return (DriveSignedSpeed(MotorCmd(ECommandCode::eDriveM1SignedSpeed, uMotor), nSpeed));
          }
 
       //** Cmd 37 Drive M1 & M2 Signed Speed
@@ -1222,17 +1373,24 @@ class DRoboClawFS
       // Sign on speed indicates the direction, acceleration is not signed.
       bool DriveM1SignedSpeedAccel(int32_t nSpeed, uint32_t uAccel) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eDriveM1SignedSpeedAccel, uAccel, nSpeed));
+         return (DriveSignedSpeedAccel(ECommandCode::eDriveM1SignedSpeedAccel, uAccel, nSpeed));
          }
 
       //** Cmd 39 Drive M2 Signed Speed & Acceleration
       // Sign on speed indicates the direction, acceleration is not signed.
       bool DriveM2SignedSpeedAccel(int32_t nSpeed, uint32_t uAccel) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eDriveM2SignedSpeedAccel, uAccel, nSpeed));
+         return (DriveSignedSpeedAccel(ECommandCode::eDriveM2SignedSpeedAccel, uAccel, nSpeed));
          }
 
-      //** Cmd 40 Drive M2 Signed Speed & Acceleration
+      //** Cmd 38 & 39 Drive Motor Signed Speed & Acceleration
+      // Sign on speed indicates the direction, acceleration is not signed.
+      bool DriveMotorSignedSpeedAccel(uint8_t uMotor, int32_t nSpeed, uint32_t uAccel) const
+         {
+         return (DriveSignedSpeedAccel(MotorCmd(ECommandCode::eDriveM1SignedSpeedAccel, uMotor), nSpeed, uAccel));
+         }
+
+      //** Cmd 40 Drive M1 & M2 Signed Speed & Acceleration
       // Sign on speed indicates the direction, acceleration is not signed.
       // Only 1 Accel value for both motors
       bool DriveBothSignedSpeedAccel(int32_t nSpeed1, int32_t nSpeed2, uint32_t uAccel) const
@@ -1246,7 +1404,7 @@ class DRoboClawFS
       bool DriveM1SignedSpeedDistance(int32_t nSpeed, uint32_t uDistance,
             bool bImmediate = true)
          {
-         return (Send3IntegralTypes0xFF(ECommandCode::eDriveM1SignedSpeedDistance,
+         return (DriveSignedSpeedDistance(ECommandCode::eDriveM1SignedSpeedDistance,
             nSpeed, uDistance, BufferCommand(bImmediate)));
          }
 
@@ -1255,7 +1413,16 @@ class DRoboClawFS
       bool DriveM2SignedSpeedDistance(int32_t nSpeed, uint32_t uDistance,
             bool bImmediate = true) const
          {
-         return (Send3IntegralTypes0xFF(ECommandCode::eDriveM2SignedSpeedDistance,
+         return (DriveSignedSpeedDistance(ECommandCode::eDriveM2SignedSpeedDistance,
+            nSpeed, uDistance, BufferCommand(bImmediate)));
+         }
+
+      //** Cmd 41 & 42 Buffered Drive Motor With Signed Speed and Distance
+      // Sign on speed indicates direction, distance is unsigned
+      bool DriveMotorSignedSpeedDistance(uint8_t uMotor, int32_t nSpeed, uint32_t uDistance,
+            bool bImmediate = true)
+         {
+         return (DriveSignedSpeedDistance(MotorCmd(ECommandCode::eDriveM1SignedSpeedDistance, uMotor),
             nSpeed, uDistance, BufferCommand(bImmediate)));
          }
 
@@ -1272,7 +1439,7 @@ class DRoboClawFS
       bool DriveM1SignedSpeedAccelDistance(int32_t nSpeed, uint32_t uAccel,
             uint32_t uDistance, bool bImmediate = true) const
          {
-         return (Send4IntegralTypes0xFF(ECommandCode::eDriveM1SignedSpeedAccelDistance,
+         return (DriveSignedSpeedAccelDistance(ECommandCode::eDriveM1SignedSpeedAccelDistance,
             uAccel, nSpeed, uDistance, BufferCommand(bImmediate)));
          }
 
@@ -1280,7 +1447,15 @@ class DRoboClawFS
       bool DriveM2SignedSpeedAccelDistance(int32_t nSpeed, uint32_t uAccel,
             uint32_t uDistance, bool bImmediate = true) const
          {
-         return (Send4IntegralTypes0xFF(ECommandCode::eDriveM2SignedSpeedAccelDistance,
+         return (DriveSignedSpeedAccelDistance(ECommandCode::eDriveM2SignedSpeedAccelDistance,
+            uAccel, nSpeed, uDistance, BufferCommand(bImmediate)));
+         }
+
+      //** Cmd 44 & 45 Buffered Drive Motor With Signed Speed, Accel, & Distance
+      bool DriveMotorSignedSpeedAccelDistance(uint8_t uMotor, int32_t nSpeed, uint32_t uAccel,
+            uint32_t uDistance, bool bImmediate = true) const
+         {
+         return (DriveSignedSpeedAccelDistance(MotorCmd(ECommandCode::eDriveM1SignedSpeedAccelDistance, uMotor),
             uAccel, nSpeed, uDistance, BufferCommand(bImmediate)));
          }
 
@@ -1325,7 +1500,7 @@ class DRoboClawFS
       // The manual says accel max is 655359.  Typo????
       bool DriveM1SignedDutyAccel(int16_t nDuty, uint16_t uAccel) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eDriveM1SignedDutyAccel, nDuty, uAccel));
+         return (DriveSignedDutyAccel(ECommandCode::eDriveM1SignedDutyAccel, nDuty, uAccel));
          }
 
       // Duty in percent (-100% to 100%), Accel in percent (0% to 100%)
@@ -1341,13 +1516,29 @@ class DRoboClawFS
       // The manual says accel max is 655359.  Typo????
       bool DriveM2SignedDutyAccel(int16_t nDuty, uint16_t uAccel) const
          {
-         return (Send2IntegralTypes0xFF(ECommandCode::eDriveM2SignedDutyAccel, nDuty, uAccel));
+         return (DriveSignedDutyAccel(ECommandCode::eDriveM2SignedDutyAccel, nDuty, uAccel));
          }
 
       // Duty in percent (-100% to 100%), Accel in percent (0% to 100%)
       bool DriveM2SignedDutyAccel(float fDuty, float fAccel) const
          {
          return (DriveM2SignedDutyAccel(static_cast<int16_t>(fDuty * 32767),
+            static_cast<uint16_t>(fAccel * 65535)));
+         }
+
+      //** Cmd 52 & 53 Drive Motor With Signed Duty And Acceleration
+      // The duty value is signed and the range is -32768 to +32767(eg. +-100% duty).
+      // The accel value range is 0 to 65535(eg maximum acceleration rate is -100% to 100% in 100ms).
+      // The manual says accel max is 655359.  Typo????
+      bool DriveMotorSignedDutyAccel(uint8_t uMotor, int16_t nDuty, uint16_t uAccel) const
+         {
+         return (DriveSignedDutyAccel(MotorCmd(ECommandCode::eDriveM1SignedDutyAccel, uMotor), nDuty, uAccel));
+         }
+
+      // Duty in percent (-100% to 100%), Accel in percent (0% to 100%)
+      bool DriveMotorSignedDutyAccel(uint8_t uMotor, float fDuty, float fAccel) const
+         {
+         return (DriveMotorSignedDutyAccel(uMotor, static_cast<int16_t>(fDuty * 32767),
             static_cast<uint16_t>(fAccel * 65535)));
          }
 
@@ -1374,7 +1565,7 @@ class DRoboClawFS
       // Verified TTC
       bool ReadM1VelocityPIDConstants(uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxSpeed) const
          {
-         return (Read4IntegralTypesCRC(ECommandCode::eReadM1VelocityPID,
+         return (ReadVelocityPIDConstants(ECommandCode::eReadM1VelocityPID,
             uP, uI, uD, uMaxSpeed));
          }
 
@@ -1383,7 +1574,16 @@ class DRoboClawFS
       // Verified TTC
       bool ReadM2VelocityPIDConstants(uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxSpeed) const
          {
-         return (Read4IntegralTypesCRC(ECommandCode::eReadM2VelocityPID,
+         return (ReadVelocityPIDConstants(ECommandCode::eReadM2VelocityPID,
+            uP, uI, uD, uMaxSpeed));
+         }
+
+      //** Cmd 55 & 56 Read Motor Velocity PID and MaxSpeed Constants
+      // uMaxSpeed is the motor speed in QPPS at 100% power
+      // Verified TTC
+      bool ReadMotorVelocityPIDConstants(uint8_t uMotor, uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxSpeed) const
+         {
+         return (ReadVelocityPIDConstants(MotorCmd(ECommandCode::eReadM1VelocityPID, uMotor),
             uP, uI, uD, uMaxSpeed));
          }
 
@@ -1392,7 +1592,7 @@ class DRoboClawFS
       bool SetM1PositionPIDConstants(uint32_t uP, uint32_t uI, uint32_t uD, uint32_t uMaxIWindup,
             uint32_t uDeadzone, int32_t nMinPos, int32_t nMaxPos) const
          {
-         return (Send7IntegralTypes0xFF(ECommandCode::eSetM1PositionPID, uD, uP, uI, uMaxIWindup,
+         return (SetPositionPIDConstants(ECommandCode::eSetM1PositionPID, uD, uP, uI, uMaxIWindup,
             uDeadzone, nMinPos, nMaxPos));
          }
 
@@ -1401,7 +1601,16 @@ class DRoboClawFS
       bool SetM2PositionPIDConstants(uint32_t uP, uint32_t uI, uint32_t uD, uint32_t uMaxIWindup,
             uint32_t uDeadzone, int32_t nMinPos, int32_t nMaxPos) const
          {
-         return (Send7IntegralTypes0xFF(ECommandCode::eSetM2PositionPID, uD, uP, uI, uMaxIWindup,
+         return (SetPositionPIDConstants(ECommandCode::eSetM2PositionPID, uD, uP, uI, uMaxIWindup,
+            uDeadzone, nMinPos, nMaxPos));
+         }
+
+      //** Cmd 61 & 62 Set Motor Position PID Constants
+      // Verified TTC
+      bool SetMotorPositionPIDConstants(uint8_t uMotor, uint32_t uP, uint32_t uI, uint32_t uD, uint32_t uMaxIWindup,
+            uint32_t uDeadzone, int32_t nMinPos, int32_t nMaxPos) const
+         {
+         return (SetPositionPIDConstants(MotorCmd(ECommandCode::eSetM1PositionPID, uMotor), uD, uP, uI, uMaxIWindup,
             uDeadzone, nMinPos, nMaxPos));
          }
 
@@ -1410,7 +1619,7 @@ class DRoboClawFS
       bool ReadM1PositionPIDConstants(uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxIWindup,
             uint32_t& uDeadzone, int32_t& nMinPos, int32_t& nMaxPos) const
          {
-         return (Read7IntegralTypesCRC(ECommandCode::eReadM1PositionPID, uP, uI, uD,
+         return (ReadPositionPIDConstants(ECommandCode::eReadM1PositionPID, uP, uI, uD,
             uMaxIWindup, uDeadzone, nMinPos, nMaxPos));
          }
 
@@ -1419,7 +1628,16 @@ class DRoboClawFS
       bool ReadM2PositionPIDConstants(uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxIWindup,
             uint32_t& uDeadzone, int32_t& nMinPos, int32_t& nMaxPos) const
          {
-         return (Read7IntegralTypesCRC(ECommandCode::eReadM2PositionPID, uP, uI, uD,
+         return (ReadPositionPIDConstants(ECommandCode::eReadM2PositionPID, uP, uI, uD,
+            uMaxIWindup, uDeadzone, nMinPos, nMaxPos));
+         }
+
+      //** Cmd 63 & 64 Read Motor Position PID Constants
+      // Verified TTC
+      bool ReadM1PositionPIDConstants(uint8_t uMotor, uint32_t& uP, uint32_t& uI, uint32_t& uD, uint32_t& uMaxIWindup,
+            uint32_t& uDeadzone, int32_t& nMinPos, int32_t& nMaxPos) const
+         {
+         return (ReadPositionPIDConstants(MotorCmd(ECommandCode::eReadM1PositionPID, uMotor), uP, uI, uD,
             uMaxIWindup, uDeadzone, nMinPos, nMaxPos));
          }
 
@@ -1427,7 +1645,7 @@ class DRoboClawFS
       bool DriveM1SignedSpeedAccelDecelPos(int32_t nSpeed, uint32_t uAccel, uint32_t uDecel,
             int32_t nPos, bool bImmediate = true) const
          {
-         return (Send5IntegralTypes0xFF(ECommandCode::eDriveM1SpeedAccelDeccelPos,
+         return (DriveSignedSpeedAccelDecelPos(ECommandCode::eDriveM1SpeedAccelDeccelPos,
             uAccel, nSpeed, uDecel, nPos, BufferCommand(bImmediate)));
          }
 
@@ -1435,7 +1653,15 @@ class DRoboClawFS
       bool DriveM2SignedSpeedAccelDecelPos(int32_t nSpeed, uint32_t uAccel, uint32_t uDecel,
             int32_t nPos, bool bImmediate = true) const
          {
-         return (Send5IntegralTypes0xFF(ECommandCode::eDriveM2SpeedAccelDeccelPos,
+         return (DriveSignedSpeedAccelDecelPos(ECommandCode::eDriveM2SpeedAccelDeccelPos,
+            uAccel, nSpeed, uDecel, nPos, BufferCommand(bImmediate)));
+         }
+
+      //** Cmd 65 && 66 Buffered Drive Motor with signed Speed, Accel, Deccel and Position
+      bool DriveMotorSignedSpeedAccelDecelPos(uint8_t uMotor, int32_t nSpeed, uint32_t uAccel, uint32_t uDecel,
+            int32_t nPos, bool bImmediate = true) const
+         {
+         return (DriveSignedSpeedAccelDecelPos(MotorCmd(ECommandCode::eDriveM1SpeedAccelDeccelPos, uMotor),
             uAccel, nSpeed, uDecel, nPos, BufferCommand(bImmediate)));
          }
 
@@ -1560,6 +1786,13 @@ class DRoboClawFS
          eSetPWMMode = 148,
          eReadPWMMode = 149,
          };
+
+      // Helper function to keep the ugliness of the conversions local
+      // Takes the "base" command code for M1 and returns the code for M1 or M2 based on the motor
+      static constexpr ECommandCode MotorCmd(ECommandCode eCmd, uint8_t uMotor)
+         {
+         return (static_cast<ECommandCode>(static_cast<uint8_t>(eCmd) + uMotor));
+         }
 
       // Device we're talking to, serial or USB
       std::string m_strTTYDevice;
@@ -2088,15 +2321,90 @@ class DRoboClawFS
          return (bRet);
          }
 
-      // Common ReadEncoder code via Commands 16 & 17
+      /*****************************************************************************
+      *** Advanced Motor Control
+      *****************************************************************************/
+
+      //** Cmd 28 & 29 Set Velocity PID constants
+      bool SetVelocityPIDConstants(ECommandCode eCmd, uint32_t uP,
+            uint32_t uI, uint32_t uD, uint32_t uMaxSpeed) const;
+
+      //** Cmd 32 & 33 Drive Motor Signed Duty Cycle (No encorders required)
+      // Value is -32,767 to +32,767 (-100% to +100%)
+      bool DriveSignedDutyCycle(ECommandCode eCmd, int16_t nDutyCycle) const;
+
+      //** Cmd 35 & 36 Drive Motor Signed Speed
+      // Speed is in quadrature pulses/second
+      bool DriveSignedSpeed(ECommandCode eCmd, int32_t nSpeed) const;
+
+      //** Cmd 38 & 39 Drive M1 Signed Speed & Acceleration
+      // Sign on speed indicates the direction, acceleration is not signed.
+      bool DriveSignedSpeedAccel(ECommandCode eCmd, int32_t nSpeed, uint32_t uAccel) const;
+
+      //** Cmd 41 & 42 Buffered Drive Motor With Signed Speed and Distance
+      // Sign on speed indicates direction, distance is unsigned
+      bool DriveSignedSpeedDistance(ECommandCode eCmd, int32_t nSpeed,
+         uint32_t uDistance, bool bImmediate = true) const;
+
+      //** Cmd 44 Buffered Drive Motor With Signed Speed, Accel, & Distance
+      bool DriveSignedSpeedAccelDistance(ECommandCode eCmd, int32_t nSpeed,
+         uint32_t uAccel, uint32_t uDistance, bool bImmediate = true) const;
+
+      //** Cmd 44 & 45 Buffered Drive Motor With Signed Speed, Accel, & Distance
+      bool DriveSignedDutyAccel(ECommandCode eCmd, int16_t nDuty, uint16_t uAccel) const;
+
+      //** Cmd 52 & 53 Drive Motor With Signed Duty And Acceleration
+      //  The duty value is signed and the range is -32768 to +32767(eg. +-100% duty).
+      // The accel value range is 0 to 65535(eg maximum acceleration rate is -100% to 100% in 100ms).
+      // The manual says accel max is 655359.  Typo????
+      bool DriveSignedDutyAccel(int16_t nDuty, uint16_t uAccel) const;
+
+      //** Cmd 55 & 56 Read Motor Velocity PID and MaxSpeed Constants
+      // uMaxSpeed is the motor speed in QPPS at 100% power
+      bool ReadVelocityPIDConstants(ECommandCode eCmd, uint32_t& uP, uint32_t& uI,
+            uint32_t& uD, uint32_t& uMaxSpeed) const;
+
+      //** Cmd 61 & 62 Set Motor Position PID Constants
+      bool SetPositionPIDConstants(ECommandCode eCmd, uint32_t uP, uint32_t uI,
+            uint32_t uD, uint32_t uMaxIWindup, uint32_t uDeadzone, int32_t nMinPos,
+            int32_t nMaxPos) const;
+
+      //** Cmd 63 & 64 Read Motor Position PID Constants
+      bool ReadPositionPIDConstants(ECommandCode eCmd, uint32_t& uP, uint32_t& uI,
+            uint32_t& uD, uint32_t& uMaxIWindup, uint32_t& uDeadzone, int32_t& nMinPos,
+            int32_t& nMaxPos) const;
+
+      //** Cmd 65 & 66 Buffered Drive M1 with signed Speed, Accel, Deccel and Position
+      bool DriveSignedSpeedAccelDecelPos(ECommandCode eCmd, int32_t nSpeed,
+            uint32_t uAccel, uint32_t uDecel, int32_t nPos, bool bImmediate = true) const;
+
+      /*****************************************************************************
+      *** Common Encoder handling functions
+      *****************************************************************************/
+
+      //** Cmd 16 & 17
       bool ReadEncoder(ECommandCode eCmd, uint32_t& uCount, EncoderStatus& Status) const;
       bool ReadEncoder(ECommandCode eCmd, int32_t& uCount, EncoderStatus& Status) const;
 
-      // Common code for reading encoder speed via Commands 18 & 19
+      //** Cmd 22 & 23
+      bool SetEncoder(ECommandCode eCmd, uint32_t uCount) const;
+      bool SetEncoder(ECommandCode eCmd, int32_t nCount) const;
+
+      // Cmd 18 & 19
       bool ReadEncoderSpeed(ECommandCode eCmd, int32_t& nSpeed, EDirection& eDirection) const;
 
-      // Common code for reading raw encoder speed via Commands 30 & 31
+      // Cmd 30 & 31
       bool ReadEncoderRawSpeed(ECommandCode eCmd, int32_t& nSpeed, EDirection& eDirection) const;
+
+      /*****************************************************************************
+      *** Common Parameter Code
+      *****************************************************************************/
+
+      //** Cmd 133 & 134 Set Max Current Limit for a motor
+      bool SetMaxCurrentLimit(ECommandCode eCmd, uint32_t uMaxCurrent, uint32_t uMinCurrent = 0) const;
+
+      //** Cmd 135 & 136 Read Max Current Limit for a motor
+      bool ReadMaxCurrentLimit(ECommandCode eCmd, uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const;
 
    private :
    };  // End of class DRoboClawFS
