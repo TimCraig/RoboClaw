@@ -23,7 +23,7 @@
 
 DRoboClawFS::DRoboClawFS(
       const std::string strTTYDevice /* = "/dev/roboclaw" */,
-      uint8_t uAddr /* = 0x80 */, uint32_t uTimeout /* = 100 */)
+      uint8_t uAddr /* = 0x80 */, uint32_t uTimeout /* = 100 */) noexcept
       : m_strTTYDevice(strTTYDevice), m_nAddr(uAddr),
       m_uReadTimeout(uTimeout), m_nPort(-1)
    {
@@ -52,7 +52,7 @@ DRoboClawFS::~DRoboClawFS()
 *
 ******************************************************************************/
 
-bool DRoboClawFS::OpenPort()
+bool DRoboClawFS::OpenPort() noexcept
    {
    #ifndef O_NOCTTY
    #define O_NOCTTY	00000400	/* not fcntl */
@@ -87,10 +87,10 @@ bool DRoboClawFS::OpenPort()
 *
 ******************************************************************************/
 
-DRoboClawFS::CRC16 DRoboClawFS::UpdateCRC16(CRC16 CRC, int nBytes,
-      uint8_t Buffer[]) const
+DRoboClawFS::CRC16 DRoboClawFS::UpdateCRC16(DRoboClawFS::CRC16 CRC, size_t nBytes,
+      uint8_t Buffer[]) noexcept
    {
-   for (int nByte = 0 ; nByte < nBytes ; nByte++)
+   for (auto nByte = 0 ; nByte < nBytes ; nByte++)
       {
       CRC ^= (static_cast<CRC16>(Buffer[nByte]) << 8);
       for (unsigned char nBit = 0 ; nBit < 8 ; nBit++)
@@ -118,7 +118,7 @@ DRoboClawFS::CRC16 DRoboClawFS::UpdateCRC16(CRC16 CRC, int nBytes,
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SendHeader(ECommandCode eCmd, CRC16* pCRC /* = nullptr */) const
+bool DRoboClawFS::SendHeader(ECommandCode eCmd, CRC16* pCRC /* = nullptr */) const noexcept
    {
    uint8_t Header[2] = { m_nAddr, static_cast<uint8_t>(eCmd) };
    if (pCRC != nullptr)
@@ -139,7 +139,7 @@ bool DRoboClawFS::SendHeader(ECommandCode eCmd, CRC16* pCRC /* = nullptr */) con
 ******************************************************************************/
 
 bool DRoboClawFS::SendHeaderCRC(ECommandCode eCmd,
-      CRC16* pHeaderCRC /* = nullptr */) const
+      CRC16* pHeaderCRC /* = nullptr */) const noexcept
    {
    CRC16 CRC;
    bool bRet = SendHeader(eCmd, &CRC);
@@ -167,7 +167,7 @@ bool DRoboClawFS::SendHeaderCRC(ECommandCode eCmd,
 ******************************************************************************/
 
 bool DRoboClawFS::SendHeaderBlockCRC(ECommandCode eCmd, size_t nSize,
-      uint8_t* pBlock, CRC16* pHeaderCRC /* = nullptr */) const
+      uint8_t* pBlock, CRC16* pHeaderCRC /* = nullptr */) const noexcept
    {
    CRC16 CRC;
    bool bRet = SendHeader(eCmd, &CRC);
@@ -197,7 +197,7 @@ bool DRoboClawFS::SendHeaderBlockCRC(ECommandCode eCmd, size_t nSize,
 ******************************************************************************/
 
 bool DRoboClawFS::SendHeaderByteCRC(ECommandCode eCmd, uint8_t uData,
-      CRC16* pHeaderCRC /* = nullptr */) const
+      CRC16* pHeaderCRC /* = nullptr */) const noexcept
    {
    bool bRet = SendHeaderBlockCRC(eCmd, 1, &uData, pHeaderCRC);
 
@@ -214,7 +214,7 @@ bool DRoboClawFS::SendHeaderByteCRC(ECommandCode eCmd, uint8_t uData,
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SendHeaderCRC0xFF(ECommandCode eCmd) const
+bool DRoboClawFS::SendHeaderCRC0xFF(ECommandCode eCmd) const noexcept
    {
    bool bRet = SendHeaderCRC(eCmd);
    if (bRet)
@@ -232,7 +232,7 @@ bool DRoboClawFS::SendHeaderCRC0xFF(ECommandCode eCmd) const
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SendHeaderByteCRC0xFF(ECommandCode eCmd, uint8_t uByte) const
+bool DRoboClawFS::SendHeaderByteCRC0xFF(ECommandCode eCmd, uint8_t uByte) const noexcept
    {
    bool bRet = SendHeaderByteCRC(eCmd, uByte);
    if (bRet)
@@ -254,14 +254,14 @@ bool DRoboClawFS::SendHeaderByteCRC0xFF(ECommandCode eCmd, uint8_t uByte) const
 *
 *****************************************************************************/
 
-bool DRoboClawFS::SendBlock(size_t nSize, uint8_t* pBlock, CRC16* pCRC) const
+bool DRoboClawFS::SendBlock(size_t nSize, uint8_t* pBlock, CRC16* pCRC) const noexcept
    {
    if (pCRC != nullptr)
       {
       *pCRC = UpdateCRC16(*pCRC, nSize, pBlock);
       } // end if
 
-   size_t nWritten = write(m_nPort, pBlock, nSize);
+   size_t nWritten = write(m_nPort, pBlock, static_cast<unsigned int>(nSize));
 
    return (nWritten == nSize);
 
@@ -273,7 +273,7 @@ bool DRoboClawFS::SendBlock(size_t nSize, uint8_t* pBlock, CRC16* pCRC) const
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SendCompatibilityCmd(ECommandCode eCmd, uint8_t nData) const
+bool DRoboClawFS::SendCompatibilityCmd(ECommandCode eCmd, uint8_t nData) const noexcept
    {
 
    return (Send1IntegralType0xFF(eCmd, nData));
@@ -288,7 +288,7 @@ bool DRoboClawFS::SendCompatibilityCmd(ECommandCode eCmd, uint8_t nData) const
 *
 ******************************************************************************/
 
-bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, uint32_t& uCount, EncoderStatus& Status) const
+bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, uint32_t& uCount, EncoderStatus& Status) const noexcept
    {
    uint8_t uStatus;
    bool bRet = Read2IntegralTypesCRC(eCmd, uCount, uStatus);
@@ -301,7 +301,7 @@ bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, uint32_t& uCount, EncoderStatus
 
    } // end of method DRoboClawFS::ReadEncoder
 
-bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, int32_t& nCount, EncoderStatus& Status) const
+bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, int32_t& nCount, EncoderStatus& Status) const noexcept
       {
       uint8_t uStatus;
       bool bRet = Read2IntegralTypesCRC(eCmd, nCount, uStatus);
@@ -322,14 +322,14 @@ bool DRoboClawFS::ReadEncoder(ECommandCode eCmd, int32_t& nCount, EncoderStatus&
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SetEncoder(ECommandCode eCmd, uint32_t uCounts) const
+bool DRoboClawFS::SetEncoder(ECommandCode eCmd, uint32_t uCounts) const noexcept
    {
 
    return (Send1IntegralType0xFF(eCmd, uCounts));
 
    } // end of method DRoboClawFS::SetEncoder
 
-bool DRoboClawFS::SetEncoder(ECommandCode eCmd, int32_t nCounts) const
+bool DRoboClawFS::SetEncoder(ECommandCode eCmd, int32_t nCounts) const noexcept
    {
 
    return (Send1IntegralType0xFF(eCmd, nCounts));
@@ -343,13 +343,13 @@ bool DRoboClawFS::SetEncoder(ECommandCode eCmd, int32_t nCounts) const
 ******************************************************************************/
 
 bool DRoboClawFS::ReadEncoderSpeed(ECommandCode eCmd, int32_t& nSpeed,
-      EDirection& eDirection) const
+      EDirection& eDirection) const noexcept
    {
    uint8_t uDirection;
    bool bRet = Read2IntegralTypesCRC(eCmd, nSpeed, uDirection);
    if (bRet)
       {
-      eDirection = (uDirection == 0) ? eFwd : eRev;
+      eDirection = (uDirection == 0) ? EDirection::eFwd : EDirection::eRev;
       } // end if
 
    return (bRet);
@@ -367,13 +367,13 @@ bool DRoboClawFS::ReadEncoderSpeed(ECommandCode eCmd, int32_t& nSpeed,
 ******************************************************************************/
 
 bool DRoboClawFS::ReadEncoderRawSpeed(ECommandCode eCmd, int32_t& nSpeed,
-      EDirection& eDirection) const
+      EDirection& eDirection) const noexcept
    {
    uint8_t uDirection;
    bool bRet = Read2IntegralTypesCRC(eCmd, nSpeed, uDirection);
    if (bRet)
       {
-      eDirection = (uDirection == 0) ? eFwd : eRev;
+      eDirection = (uDirection == 0) ? EDirection::eFwd : EDirection::eRev;
       } // end if
 
    return (bRet);
@@ -386,7 +386,7 @@ bool DRoboClawFS::ReadEncoderRawSpeed(ECommandCode eCmd, int32_t& nSpeed,
 *
 *****************************************************************************/
 
-bool DRoboClawFS::ReadFirmwareVersion(std::string& strVersion) const
+bool DRoboClawFS::ReadFirmwareVersion(std::string& strVersion) const noexcept
    {
    CRC16 uCalcCRC;
    bool bRet = SendHeader(ECommandCode::eReadVersion, &uCalcCRC);
@@ -412,7 +412,7 @@ bool DRoboClawFS::ReadFirmwareVersion(std::string& strVersion) const
 *****************************************************************************/
 
 bool DRoboClawFS::ReadString(std::string& strString, CRC16& CalcCRC,
-      bool bStripCTRL /* = true */) const
+      bool bStripCTRL /* = true */) const noexcept
    {
    bool bRet = true;
    uint8_t Buf[60];
@@ -463,7 +463,7 @@ bool DRoboClawFS::ReadString(std::string& strString, CRC16& CalcCRC,
 *
 *****************************************************************************/
 
-bool DRoboClawFS::ReadBlock(uint8_t* pBuf, size_t nBytes, CRC16* pCalcCRC /* = nullptr */) const
+bool DRoboClawFS::ReadBlock(uint8_t* pBuf, size_t nBytes, CRC16* pCalcCRC /* = nullptr */) const noexcept
    {
    bool bRet = true;
 
@@ -492,7 +492,7 @@ bool DRoboClawFS::ReadBlock(uint8_t* pBuf, size_t nBytes, CRC16* pCalcCRC /* = n
 *
 *****************************************************************************/
 
-bool DRoboClawFS::ReadByte(uint8_t& uByte) const
+bool DRoboClawFS::ReadByte(uint8_t& uByte) const noexcept
    {
    bool bRet = false;
 
@@ -550,7 +550,7 @@ bool DRoboClawFS::ReadByte(uint8_t& uByte) const
 ******************************************************************************/
 
 bool DRoboClawFS::SetVelocityPIDConstants(ECommandCode eCmd, uint32_t uP,
-      uint32_t uI, uint32_t uD, uint32_t uMaxSpeed) const
+      uint32_t uI, uint32_t uD, uint32_t uMaxSpeed) const noexcept
    {
 
    return (Send4IntegralTypes0xFF(eCmd, uD, uP, uI, uMaxSpeed));
@@ -566,7 +566,7 @@ bool DRoboClawFS::SetVelocityPIDConstants(ECommandCode eCmd, uint32_t uP,
 *
 ******************************************************************************/
 
-bool DRoboClawFS::DriveSignedDutyCycle(ECommandCode eCmd, int16_t nDutyCycle) const
+bool DRoboClawFS::DriveSignedDutyCycle(ECommandCode eCmd, int16_t nDutyCycle) const noexcept
    {
 
    return (Send1IntegralType0xFF(eCmd, nDutyCycle));
@@ -582,7 +582,7 @@ bool DRoboClawFS::DriveSignedDutyCycle(ECommandCode eCmd, int16_t nDutyCycle) co
 *
 ******************************************************************************/
 
-bool DRoboClawFS::DriveSignedSpeed(ECommandCode eCmd, int32_t nSpeed) const
+bool DRoboClawFS::DriveSignedSpeed(ECommandCode eCmd, int32_t nSpeed) const noexcept
    {
 
    return (Send1IntegralType0xFF(eCmd, nSpeed));
@@ -598,7 +598,7 @@ bool DRoboClawFS::DriveSignedSpeed(ECommandCode eCmd, int32_t nSpeed) const
 *
 ******************************************************************************/
 
-bool DRoboClawFS::DriveSignedSpeedAccel(ECommandCode eCmd, int32_t nSpeed, uint32_t uAccel) const
+bool DRoboClawFS::DriveSignedSpeedAccel(ECommandCode eCmd, int32_t nSpeed, uint32_t uAccel) const noexcept
    {
 
    return (Send2IntegralTypes0xFF(eCmd, uAccel, nSpeed));
@@ -615,7 +615,7 @@ bool DRoboClawFS::DriveSignedSpeedAccel(ECommandCode eCmd, int32_t nSpeed, uint3
 ******************************************************************************/
 
 bool DRoboClawFS::DriveSignedSpeedDistance(ECommandCode eCmd, int32_t nSpeed,
-      uint32_t uDistance, bool bImmediate /* = true */) const
+      uint32_t uDistance, bool bImmediate /* = true */) const noexcept
    {
 
    return (Send3IntegralTypes0xFF(eCmd, nSpeed, uDistance, BufferCommand(bImmediate)));
@@ -631,7 +631,7 @@ bool DRoboClawFS::DriveSignedSpeedDistance(ECommandCode eCmd, int32_t nSpeed,
 ******************************************************************************/
 
 bool DRoboClawFS::DriveSignedSpeedAccelDistance(ECommandCode eCmd, int32_t nSpeed,
-      uint32_t uAccel, uint32_t uDistance, bool bImmediate /* = true */) const
+      uint32_t uAccel, uint32_t uDistance, bool bImmediate /* = true */) const noexcept
    {
 
    return (Send4IntegralTypes0xFF(eCmd, uAccel, nSpeed, uDistance, BufferCommand(bImmediate)));
@@ -649,7 +649,7 @@ bool DRoboClawFS::DriveSignedSpeedAccelDistance(ECommandCode eCmd, int32_t nSpee
 *
 ******************************************************************************/
 
-bool DRoboClawFS::DriveSignedDutyAccel(ECommandCode eCmd, int16_t nDuty, uint16_t uAccel) const
+bool DRoboClawFS::DriveSignedDutyAccel(ECommandCode eCmd, int16_t nDuty, uint16_t uAccel) const noexcept
    {
 
    return (Send2IntegralTypes0xFF(eCmd, nDuty, uAccel));
@@ -666,7 +666,7 @@ bool DRoboClawFS::DriveSignedDutyAccel(ECommandCode eCmd, int16_t nDuty, uint16_
 ******************************************************************************/
 
 bool DRoboClawFS::ReadVelocityPIDConstants(ECommandCode eCmd, uint32_t& uP, uint32_t& uI,
-      uint32_t& uD, uint32_t& uMaxSpeed) const
+      uint32_t& uD, uint32_t& uMaxSpeed) const noexcept
    {
 
    return (Read4IntegralTypesCRC(eCmd, uP, uI, uD, uMaxSpeed));
@@ -678,11 +678,12 @@ bool DRoboClawFS::ReadVelocityPIDConstants(ECommandCode eCmd, uint32_t& uP, uint
 ***  DRoboClawFS::SetPositionPIDConstants
 *
 * Cmd 61 & 62 Set Motor Position PID Constants
+*
 ******************************************************************************/
 
 bool DRoboClawFS::SetPositionPIDConstants(ECommandCode eCmd, uint32_t uP, uint32_t uI,
       uint32_t uD, uint32_t uMaxIWindup, uint32_t uDeadzone, int32_t nMinPos,
-      int32_t nMaxPos) const
+      int32_t nMaxPos) const noexcept
    {
 
    return (Send7IntegralTypes0xFF(eCmd, uD, uP, uI, uMaxIWindup, uDeadzone,
@@ -700,7 +701,7 @@ bool DRoboClawFS::SetPositionPIDConstants(ECommandCode eCmd, uint32_t uP, uint32
 
 bool DRoboClawFS::ReadPositionPIDConstants(ECommandCode eCmd, uint32_t& uP, uint32_t& uI,
       uint32_t& uD, uint32_t& uMaxIWindup, uint32_t& uDeadzone, int32_t& nMinPos,
-      int32_t& nMaxPos) const
+      int32_t& nMaxPos) const noexcept
    {
 
     return (Read7IntegralTypesCRC(eCmd, uP, uI, uD,
@@ -717,7 +718,7 @@ bool DRoboClawFS::ReadPositionPIDConstants(ECommandCode eCmd, uint32_t& uP, uint
 ******************************************************************************/
 
 bool DRoboClawFS::DriveSignedSpeedAccelDecelPos(ECommandCode eCmd, int32_t nSpeed,
-      uint32_t uAccel, uint32_t uDecel, int32_t nPos, bool bImmediate /* = true */) const
+      uint32_t uAccel, uint32_t uDecel, int32_t nPos, bool bImmediate /* = true */) const noexcept
    {
 
    return (Send5IntegralTypes0xFF(eCmd, uAccel, nSpeed, uDecel, nPos,
@@ -734,7 +735,8 @@ bool DRoboClawFS::DriveSignedSpeedAccelDecelPos(ECommandCode eCmd, int32_t nSpee
 *
 ******************************************************************************/
 
-bool DRoboClawFS::SetMaxCurrentLimit(ECommandCode eCmd, uint32_t uMaxCurrent, uint32_t uMinCurrent /* = 0*/) const
+bool DRoboClawFS::SetMaxCurrentLimit(ECommandCode eCmd, uint32_t uMaxCurrent,
+      uint32_t uMinCurrent /* = 0*/) const noexcept
    {
 
    return (Send2IntegralTypes0xFF(eCmd,  uMaxCurrent, uMinCurrent));
@@ -751,7 +753,7 @@ bool DRoboClawFS::SetMaxCurrentLimit(ECommandCode eCmd, uint32_t uMaxCurrent, ui
 *
 ******************************************************************************/
 
-bool DRoboClawFS::ReadMaxCurrentLimit(ECommandCode eCmd, uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const
+bool DRoboClawFS::ReadMaxCurrentLimit(ECommandCode eCmd, uint32_t& uMaxCurrent, uint32_t& uMinCurrent) const noexcept
    {
 
    return (Read2IntegralTypesCRC(eCmd, uMaxCurrent, uMinCurrent));
@@ -766,7 +768,7 @@ bool DRoboClawFS::ReadMaxCurrentLimit(ECommandCode eCmd, uint32_t& uMaxCurrent, 
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetStatusString(EStatus eStatus)
+std::string DRoboClawFS::GetStatusString(EStatus eStatus) noexcept
    {
    std::string strStatus = "Unknown";
 
@@ -854,7 +856,7 @@ std::string DRoboClawFS::GetStatusString(EStatus eStatus)
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetPWMModeString(EPWMMode ePWMMode)
+std::string DRoboClawFS::GetPWMModeString(EPWMMode ePWMMode) noexcept
    {
 
    return ((ePWMMode == eLockedAntiphase) ? "Locked Antiphase" : "Sign Magnitude");
@@ -867,10 +869,10 @@ std::string DRoboClawFS::GetPWMModeString(EPWMMode ePWMMode)
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetDirectionString(EDirection eDirection)
+std::string DRoboClawFS::GetDirectionString(EDirection eDirection) noexcept
    {
 
-   return ((eDirection == eFwd) ? "Forward" : "Reverse");
+   return ((eDirection == EDirection::eFwd) ? "Forward" : "Reverse");
 
    } // end of method DRoboClawFS::GetDirectionString
 
@@ -880,7 +882,7 @@ std::string DRoboClawFS::GetDirectionString(EDirection eDirection)
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetS3ModeString(ES3Mode eMode)
+std::string DRoboClawFS::GetS3ModeString(ES3Mode eMode) noexcept
    {
    static std::string Names[] = { "Disabled", "EStop Latching", "EStop",
       "Voltage Clamp" };
@@ -895,7 +897,7 @@ std::string DRoboClawFS::GetS3ModeString(ES3Mode eMode)
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetS4ModeString(ES4Mode eMode)
+std::string DRoboClawFS::GetS4ModeString(ES4Mode eMode) noexcept
    {
    static std::string Names[] = { "Disabled", "EStop Latching", "EStop",
       "Voltage Clamp", "Motor 1 Home" };
@@ -910,7 +912,7 @@ std::string DRoboClawFS::GetS4ModeString(ES4Mode eMode)
 *
 ******************************************************************************/
 
-std::string DRoboClawFS::GetS5ModeString(ES5Mode eMode)
+std::string DRoboClawFS::GetS5ModeString(ES5Mode eMode) noexcept
    {
    static std::string Names[] = { "Disabled", "EStop Latching", "EStop",
       "Voltage Clamp", "Motor 2 Home" };

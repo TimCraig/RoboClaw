@@ -2,9 +2,46 @@
 #include <thread>
 #include <chrono>
 
-#include "PanTilt.h"
+//#include "PanTilt.h"
+#include "Odometry.h"
 
 using namespace std;
+constexpr double dPi = 3.14159265358979323846;
+constexpr double dDegPerRad = 180.0 / dPi;
+constexpr double dHalfPi = dPi / 2.0;
+
+void PrintPose(const DPose& P)
+   {
+   std::cout << "X=" << P.GetX() << '\n';
+   std::cout << "Y=" << P.GetY() << '\n';
+   std::cout << "Theta=" << P.GetTheta() * dDegPerRad << '\n';
+   std::cout << std::endl;
+
+   return;
+   }
+
+int main(int /* argc */, char* /*argv*/ [])
+   {
+   double dR = 10.0;
+   double dTrack = 2.0;
+   double dLeft = -dHalfPi * (dR - dTrack / 2.0);
+   double dRight = -dHalfPi * (dR + dTrack / 2.0);
+
+   DOdometry O(dR, 0.0, dHalfPi, dTrack);
+   PrintPose(O.GetPose());
+   O.UpdatePose(dLeft, dRight);
+   PrintPose(O.GetPose());
+   O.UpdatePose(dLeft, dRight);
+   PrintPose(O.GetPose());
+   O.UpdatePose(dLeft, dRight);
+   PrintPose(O.GetPose());
+   O.UpdatePose(dLeft, dRight);
+   PrintPose(O.GetPose());
+
+   return (0);
+   }
+
+#if 0
 
 void Function(string strName)
    {
@@ -689,3 +726,4 @@ int main(int argc, char *argv[])
    return (0);
 
    }
+#endif

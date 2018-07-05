@@ -16,6 +16,8 @@ Author: Tim Craig (Druai Robotics) 2017
 
 */
 
+#pragma once
+
 #if !defined(PANTILT_H)
 #define PANTILT_H
 
@@ -45,6 +47,7 @@ class DPanTilt : public DRoboClawFS
       // Generic order for array parameters
       enum { ePan, eTilt };
 
+      // Axis positions in encoder counts, degrees, and radians
       using Position = int32_t[2];
       using PositionDeg = double[2];
       using PositionRad = double[2];
@@ -54,16 +57,17 @@ class DPanTilt : public DRoboClawFS
             uint32_t uReadTimeout = 100);
 
       DPanTilt(const DPanTilt& src) = delete;
-      DPanTilt(const DPanTilt&& src) = delete;
+      DPanTilt(DPanTilt&& src) = delete;
 
       virtual ~DPanTilt() = default;
 
       DPanTilt& operator=(const DPanTilt& rhs) = delete;
-      DPanTilt& operator=(const DPanTilt&& rhs) = delete;
+      DPanTilt& operator=(DPanTilt&& rhs) = delete;
 
-      // Motor configuration
+      // Motor axis configuration
       void ConfigMotors(EMotorConfig eMotorConfig);
 
+      // Report axis motor numbers in RoboClaw terms { 1, 2 } for Operator Display
       void GetMotorConfig(int& nPanMotor, int& nTiltMotor) const
          {
          nPanMotor = GetPanMotor();
@@ -71,12 +75,12 @@ class DPanTilt : public DRoboClawFS
          return;
          }
 
-      int GetPanMotor() const
+      int GetPanMotor() const noexcept
          {
          return (m_nPanMotor + 1);
          }
 
-      int GetTiltMotor() const
+      int GetTiltMotor() const noexcept
          {
          return (m_nTiltMotor + 1);
          }
@@ -85,33 +89,33 @@ class DPanTilt : public DRoboClawFS
       *** Individual axis moves with default speed, acceleration, and deceleration
       *****************************************************************************/
 
-      bool PanToDeg(double dDegrees, bool bImmediate = true) const
+      bool PanToDeg(double dDegrees, bool bImmediate = true) const noexcept
          {
          return (PanToCnt(PanDegToCnts(dDegrees), bImmediate));
          }
 
-      bool PanToRad(double dRadians, bool bImmediate = true) const
+      bool PanToRad(double dRadians, bool bImmediate = true) const noexcept
          {
          return (PanToCnt(PanRadToCnts(dRadians), bImmediate));
          }
 
-      bool PanToCnt(int32_t nCount, bool bImmediate = true) const
+      bool PanToCnt(int32_t nCount, bool bImmediate = true) const noexcept
          {
          return (PanToCnt(nCount, m_Parms[m_nPanMotor].m_nDefaultSpeed,
                m_Parms[m_nPanMotor].m_uDefaultAccel, m_Parms[m_nPanMotor].m_uDefaultDecel, bImmediate));
          }
 
-      bool TiltToDeg(double dDegrees, bool bImmediate = true) const
+      bool TiltToDeg(double dDegrees, bool bImmediate = true) const noexcept
          {
          return (TiltToCnt(TiltDegToCnts(dDegrees), bImmediate));
          }
 
-      bool TiltToRad(double dRadians, bool bImmediate = true) const
+      bool TiltToRad(double dRadians, bool bImmediate = true) const noexcept
          {
          return (TiltToCnt(TiltRadToCnts(dRadians), bImmediate));
          }
 
-      bool TiltToCnt(int32_t nCount, bool bImmediate = true) const
+      bool TiltToCnt(int32_t nCount, bool bImmediate = true) const noexcept
          {
          return (TiltToCnt(nCount, m_Parms[m_nTiltMotor].m_nDefaultSpeed,
                m_Parms[m_nTiltMotor].m_uDefaultAccel, m_Parms[m_nTiltMotor].m_uDefaultDecel, bImmediate));
@@ -346,7 +350,7 @@ class DPanTilt : public DRoboClawFS
          }
 
       // Handle the encoder constants for the configuration
-      void SetPanCountsPerRev(int32_t nCounts)
+      void SetPanCountsPerRev(int32_t nCounts) noexcept
          {
          m_Parms[m_nPanMotor].m_nCntsPerRev = nCounts;
          m_Parms[m_nPanMotor].m_dDegPerCnt = nCounts / 360.0;
@@ -354,12 +358,12 @@ class DPanTilt : public DRoboClawFS
          return;
          }
 
-      int32_t GetPanCountsPerRev() const
+      int32_t GetPanCountsPerRev() const noexcept
          {
          return (m_Parms[m_nPanMotor].m_nCntsPerRev);
          }
 
-      void SetTiltCountsPerRev(int32_t nCounts)
+      void SetTiltCountsPerRev(int32_t nCounts) noexcept
          {
          m_Parms[m_nTiltMotor].m_nCntsPerRev = nCounts;
          m_Parms[m_nTiltMotor].m_dDegPerCnt = nCounts / 360.0;
@@ -367,33 +371,33 @@ class DPanTilt : public DRoboClawFS
          return;
          }
 
-      int32_t GetTiltCountsPerRev() const
+      int32_t GetTiltCountsPerRev() const noexcept
          {
          return (m_Parms[m_nTiltMotor].m_nCntsPerRev);
          }
 
-      void SetPanLimits(int32_t nMinPan, int32_t nMaxPan)
+      void SetPanLimits(int32_t nMinPan, int32_t nMaxPan) noexcept
          {
          m_Parms[m_nPanMotor].m_nMin = nMinPan;
          m_Parms[m_nPanMotor].m_nMax = nMaxPan;
          return;
          }
 
-      void GetPanLimits(int32_t& nMinPan, int32_t& nMaxPan) const
+      void GetPanLimits(int32_t& nMinPan, int32_t& nMaxPan) const noexcept
          {
          nMinPan = m_Parms[m_nPanMotor].m_nMin;
          nMaxPan = m_Parms[m_nPanMotor].m_nMax;
          return;
          }
 
-      void SetTiltLimits(int32_t nMinTilt, int32_t nMaxTilt)
+      void SetTiltLimits(int32_t nMinTilt, int32_t nMaxTilt) noexcept
          {
          m_Parms[m_nTiltMotor].m_nMin = nMinTilt;
          m_Parms[m_nTiltMotor].m_nMax = nMaxTilt;
          return;
          }
 
-      void GetTiltLimits(int32_t& nMinTilt, int32_t& nMaxTilt) const
+      void GetTiltLimits(int32_t& nMinTilt, int32_t& nMaxTilt) const noexcept
          {
          nMinTilt = m_Parms[m_nTiltMotor].m_nMin;
          nMaxTilt = m_Parms[m_nTiltMotor].m_nMax;
@@ -401,134 +405,133 @@ class DPanTilt : public DRoboClawFS
          }
 
       // Handle the default speed, accel, and decel values
-      void SetDefaultPanSpeed(int32_t nSpeed)
+      void SetDefaultPanSpeed(int32_t nSpeed) noexcept
          {
          m_Parms[m_nPanMotor].m_nDefaultSpeed = nSpeed;
          return;
          }
 
-      int32_t GetDefaultPanSpeed() const
+      int32_t GetDefaultPanSpeed() const noexcept
          {
          return (m_Parms[m_nPanMotor].m_nDefaultSpeed);
          }
 
-      void SetDefaultPanAccel(uint32_t uAccel)
+      void SetDefaultPanAccel(uint32_t uAccel) noexcept
          {
          m_Parms[m_nPanMotor].m_uDefaultAccel = uAccel;
          return;
          }
 
-      uint32_t GetDefaultPanAccel() const
+      uint32_t GetDefaultPanAccel() const noexcept
          {
          return (m_Parms[m_nPanMotor].m_uDefaultAccel);
          }
 
-      void SetDefaultPanDecel(uint32_t uDecel)
+      void SetDefaultPanDecel(uint32_t uDecel) noexcept
          {
          m_Parms[m_nPanMotor].m_uDefaultDecel = uDecel;
          return;
          }
 
-      uint32_t GetDefaultPanDecel() const
+      uint32_t GetDefaultPanDecel() const noexcept
          {
          return (m_Parms[m_nPanMotor].m_uDefaultDecel);
          }
 
-      void SetDefaultTiltSpeed(int32_t nSpeed)
+      void SetDefaultTiltSpeed(int32_t nSpeed) noexcept
          {
          m_Parms[m_nTiltMotor].m_nDefaultSpeed = nSpeed;
          return;
          }
 
-      int32_t GetDefaultTiltSpeed() const
+      int32_t GetDefaultTiltSpeed() const noexcept
          {
          return (m_Parms[m_nTiltMotor].m_nDefaultSpeed);
          }
 
-      void SetDefaultTiltAccel(uint32_t uAccel)
+      void SetDefaultTiltAccel(uint32_t uAccel) noexcept
          {
          m_Parms[m_nTiltMotor].m_uDefaultAccel = uAccel;
          return;
          }
 
-      uint32_t GetDefaultTiltAccel() const
+      uint32_t GetDefaultTiltAccel() const noexcept
          {
          return (m_Parms[m_nTiltMotor].m_uDefaultAccel);
          }
 
-      void SetDefaultTiltDecel(uint32_t uDecel)
+      void SetDefaultTiltDecel(uint32_t uDecel) noexcept
          {
          m_Parms[m_nTiltMotor].m_uDefaultDecel = uDecel;
          return;
          }
 
-      uint32_t GetDefaultTiltDecel() const
+      uint32_t GetDefaultTiltDecel() const noexcept
          {
          return (m_Parms[m_nTiltMotor].m_uDefaultDecel);
          }
 
       // Functions for converting angles to encoder counts
-      int32_t PanDegToCnts(double dDegrees) const
+      int32_t PanDegToCnts(double dDegrees) const noexcept
          {
          return (static_cast<int32_t>(dDegrees / m_Parms[m_nPanMotor].m_dDegPerCnt));
          }
 
-      int32_t TiltDegToCnts(double dDegrees) const
+      int32_t TiltDegToCnts(double dDegrees) const noexcept
          {
          return (static_cast<int32_t>(dDegrees / m_Parms[m_nTiltMotor].m_dDegPerCnt));
          }
 
-      int32_t PanRadToCnts(double dRadians) const
+      int32_t PanRadToCnts(double dRadians) const noexcept
          {
          return (static_cast<int32_t>(dRadians / m_Parms[m_nPanMotor].m_dRadPerCnt));
          }
 
-      int32_t TiltRadToCnts(double dRadians) const
+      int32_t TiltRadToCnts(double dRadians) const noexcept
          {
          return (static_cast<int32_t>(dRadians / m_Parms[m_nTiltMotor].m_dRadPerCnt));
          }
 
       // Functions to convert encoder counts to angular values
-      double PanCntsToDeg(int32_t nCounts) const
+      double PanCntsToDeg(int32_t nCounts) const noexcept
          {
          return (nCounts * m_Parms[m_nPanMotor].m_dDegPerCnt);
          }
 
-      double TiltCntsToDeg(int32_t nCounts) const
+      double TiltCntsToDeg(int32_t nCounts) const noexcept
          {
          return (nCounts * m_Parms[m_nTiltMotor].m_dDegPerCnt);
          }
 
-      double PanCntsToRad(int32_t nCounts) const
+      double PanCntsToRad(int32_t nCounts) const noexcept
          {
          return (nCounts * m_Parms[m_nPanMotor].m_dRadPerCnt);
          }
 
-      double TiltCntsToRad(int32_t nCounts) const
+      double TiltCntsToRad(int32_t nCounts) const noexcept
          {
          return (nCounts * m_Parms[m_nTiltMotor].m_dRadPerCnt);
          }
-
 
    protected:
 
       /*****************************************************************************
       *
-      ***  class AxisParms
+      ***  class AxisParameters
       *
       * Class for grouping axis values
       *
       *****************************************************************************/
 
-      class AxisParms
+      class AxisParameters
          {
          public:
-            AxisParms() = default;
-            AxisParms(const AxisParms& src) = delete;
-            AxisParms(const AxisParms&& src) = delete;
-            ~AxisParms() = default;
-            AxisParms& operator=(const AxisParms& rhs) = delete;
-            AxisParms& operator=(const AxisParms&& rhs) = delete;
+            AxisParameters() = default;
+            AxisParameters(const AxisParameters& src) = default;
+            AxisParameters(AxisParameters&& src) = default;
+            ~AxisParameters() = default;
+            AxisParameters& operator=(const AxisParameters& rhs) = default;
+            AxisParameters& operator=(AxisParameters&& rhs) = default;
 
             // Encoder counts per full revolution
             int32_t m_nCntsPerRev;
@@ -540,18 +543,18 @@ class DPanTilt : public DRoboClawFS
             double m_dRadPerCnt;
 
             // Angle limits in encoder counts
-            int32_t m_nMin;
-            int32_t m_nMax;
+            int32_t m_nMin = {0};
+            int32_t m_nMax = {0};
 
             // Default speed, acceleration, and decelration values
-            int32_t m_nDefaultSpeed = 0;
-            uint32_t m_uDefaultAccel = 0;
-            uint32_t m_uDefaultDecel = 0;
-         }; // end of class AxisParms
+            int32_t m_nDefaultSpeed = {0};
+            uint32_t m_uDefaultAccel = {0};
+            uint32_t m_uDefaultDecel = {0};
+         }; // end of class AxisParameters
 
-      AxisParms m_Parms[2];
+      AxisParameters m_Parms[2];
 
-      // Motor configuration
+      // Motor axis numbers zero based for C++ (RoboClaw axes minus 1)
       int m_nPanMotor;
       int m_nTiltMotor;
 
@@ -560,12 +563,12 @@ class DPanTilt : public DRoboClawFS
       static constexpr double dDegPerRad = 180.0 / dPi;
 
       // Angle conversion functions
-      static double DegToRad(double dDegrees)
+      static double DegToRad(double dDegrees) noexcept
          {
          return (dDegrees / dDegPerRad);
          }
 
-      static double RadToDeg(double dRadians)
+      static double RadToDeg(double dRadians) noexcept
          {
          return (dRadians * dDegPerRad);
          }

@@ -18,18 +18,21 @@ implemented with robots using ROS in mind.  (Robot Operating System www.ROS.org)
 Length specifications are left generic but in ROS the unit of Length is in meters.
 All length variables are to be given in the SAME units.
 
-Author: Tim Craig (Druai Robotics) 2017
+Author: Tim Craig (Druai Robotics  TimCraig@Druai.com) 2017
 
 */
 
 #if !defined(DIFFDRIVE_H)
 #define DIFFDRIVE_H
 
+#pragma once
+
 /*****************************************************************************
  ******************************  I N C L U D E  ******************************
  ****************************************************************************/
 
 #include "RoboClawFS.h"
+#include <boost/algorithm/clamp.hpp>
 
 /*****************************************************************************
 *
@@ -43,10 +46,13 @@ class DDiffDrive : public DRoboClawFS
       using Base = DRoboClawFS;
 
       // How to configure which motor controls which axis
-      enum EMotorConfig { eLeft1Right2, eRight1Left2 };
+      enum class EMotorConfig : uint8_t { eLeft1Right2, eRight1Left2 };
 
       // Generic order for array parameters
-      enum { eLeft, eRight };
+      enum class EMotor : uint8_t { eLeft, eRight };
+
+      // Turn direction enumeration
+      enum class ETurn : int8_t { eLeft = 1, eRight = -1 };
 
       DDiffDrive(EMotorConfig eMotorConfig, double dWheelDiameter, int32_t nCntsPerRev,
            double dWheelBase,
@@ -62,29 +68,42 @@ class DDiffDrive : public DRoboClawFS
 
       /*****************************************************************************
       *
-      ***  class MotorMotionParms
+      ***  class MotorMotionParams
       *
       * Class for grouping motor motion parameters to make it feasible to
       * programatically specify the motor parameters for the RoboClaw's complex
-      * motion commands.
+      * motion commands.  Often several of these parameters will remain constant
+      * for a series of commands so only those changing need be set.  For instance,
+      * acceleration and deceleration will be constant while the speed varies.
       *
       *****************************************************************************/
 
-      class MotorMotionParms
+      class MotorMotionParams
          {
          public:
-            MotorMotionParms() = default;
-            MotorMotionParms(const MotorMotionParms& src) = delete;
-            MotorMotionParms(const MotorMotionParms&& src) = delete;
-            ~MotorMotionParms() = default;
-            MotorMotionParms& operator=(const MotorMotionParms& rhs) = delete;
-            MotorMotionParms& operator=(const MotorMotionParms&& rhs) = delete;
+            MotorMotionParams() = default;
+            MotorMotionParams(int32_t nSpeed, uint32_t uAccel, uint32_t uDecel, uint32_t uDistance) :
+               m_nSpeed(nSpeed), m_uAccel(uAccel), m_uDecel(uDecel), m_uDistance(uDistance)
+               {
+               return;
+               }
 
-            int32_t m_nSpeed;
-            uint32_t m_uAccel;
-            uint32_t m_uDecel;
-            uint32_t m_uDistance;
-         }; // end of class MotorMotionParms
+            MotorMotionParams(const MotorMotionParams& src) = default;
+
+
+            MotorMotionParams(MotorMotionParams&& src) = default;
+
+            ~MotorMotionParams() = default;
+
+            MotorMotionParams& operator=(const MotorMotionParams& rhs) = default;
+
+            MotorMotionParams& operator=(MotorMotionParams&& rhs) = default;
+
+            int32_t m_nSpeed = {0};
+            uint32_t m_uAccel = {0};
+            uint32_t m_uDecel = {0};
+            uint32_t m_uDistance = {0};
+         }; // end of class MotorMotionParams
 
       /*****************************************************************************
       *** Motor Parameters
@@ -109,12 +128,12 @@ class DDiffDrive : public DRoboClawFS
          return (m_nRightMotor + 1);
          }
 
-      MotorMotionParms& GetLeftMotorMotionParams()
+      MotorMotionParams& GetLeftMotorMotionParams()
          {
          return (m_MotionParms[m_nLeftMotor]);
          }
 
-      MotorMotionParms& GetRightMotorMotionParams()
+      MotorMotionParams& GetRightMotorMotionParams()
          {
          return (m_MotionParms[m_nRightMotor]);
          }
@@ -213,6 +232,10 @@ class DDiffDrive : public DRoboClawFS
          return (SpinRPS(DegToRad(dOmega)));
          }
 
+      // Spin with specified wheel speed in Counts/Second.
+      // Sign determines direction.
+      bool SpinSpeed(int32_t nSpeed) const;
+
       // Speed is in Counts/Second signed for direction
       // Acceleration is unsigned
       bool DriveStraightAccel(int32_t nSpeed, uint32_t uAccel) const
@@ -239,19 +262,19 @@ class DDiffDrive : public DRoboClawFS
 
       // Linear Speed is in Length/Second (Meters/Second in ROS) and Angular Speed is in Radians/Second
       // This is the default units in ROS
-      bool TwistRPS(double dLinearSpeed, double dOmega, bool bAdjustAccel = true) const
+      bool TwistRPS(double dLinearSpeed, double dOmega, bool bAdjustAccel = true)
          {
          return (TwistRPS(LengthToCnts(dLinearSpeed), dOmega, bAdjustAccel));
          }
 
       // Twist with Angular Velocity in Degrees/Second
-      bool TwistDPS(int32_t nLinearSpeed, double dOmega, bool bAdjustAccel = true) const
+      bool TwistDPS(int32_t nLinearSpeed, double dOmega, bool bAdjustAccel = true)
          {
          return (TwistRPS(nLinearSpeed, DegToRad(dOmega), bAdjustAccel));
          }
 
       // Twist with Linear Velocity in Length/Second and Angular Velocity in Degrees/Second
-      bool TwistDPS(double dLinearSpeed, double dOmega, bool bAdjustAccel = true) const
+      bool TwistDPS(double dLinearSpeed, double dOmega, bool bAdjustAccel = true)
          {
          return (TwistRPS(LengthToCnts(dLinearSpeed), DegToRad(dOmega), bAdjustAccel));
          }
@@ -259,6 +282,19 @@ class DDiffDrive : public DRoboClawFS
       /*****************************************************************************
       *** Turns with Radius Specified
       *****************************************************************************/
+
+      // Make a turn with the specified speed, turn radius, and direction.
+      // Speed is in Counts/Second and Radius is in Length Units.
+      // Motion is relative to the center of the wheel axis.
+      bool RadiusTurn(int32_t nLinearSpeed, double dRadius, ETurn eTurn, bool bAdjustAccel = true);
+
+      // Make a turn with the specified speed, turn radius, and direction.
+      // Speed is in Length/Second and Radius is in Length Units.
+      // Motion is relative to the center of the wheel axis.
+      bool RadiusTurn(double dLinearSpeed, double dRadius, ETurn eTurn, bool bAdjustAccel = true) const
+         {
+         return (RadiusTurn(LengthToCnts(dLinearSpeed), dRadius, eTurn, bAdjustAccel));
+         }
 
       /*****************************************************************************
       *** Wheel and Distance Parameters
@@ -296,7 +332,7 @@ class DDiffDrive : public DRoboClawFS
 
    protected:
       // Have a persistent set of parameters since some may not change frequently
-      MotorMotionParms m_MotionParms[2];
+      MotorMotionParams m_MotionParms[2];
 
       // Motor configuration
       int m_nLeftMotor;
@@ -315,6 +351,71 @@ class DDiffDrive : public DRoboClawFS
       int32_t m_nDefaultSpeed;
       uint32_t m_uDefaultAccel;
       uint32_t m_uDefaultDecel;
+
+      // Mortor or Robot Limits
+      // Max robot speed (positive), may (should) be less than theoretical max from motor calibration.
+      int32_t m_nMaxWheelSpeed;
+
+      // Max linear speed
+      // Max linear speed must be well less than the Max Wheel Speed because the outside wheel
+      //   has to speed up in turns. (For a pivot turn the outside wheel travels twice as fast as the linear speed.)
+      int32_t m_nMaxLinearSpeed;
+
+      // Maximum angular velocity (positive radians/second).  Limit for Spin, Twist, and Radius Turn commands.
+      double m_dMaxOmega;
+
+      // Set and get motion limits
+
+      int32_t GetMaxWheelSpeed() const
+         {
+         return (m_nMaxWheelSpeed);
+         }
+
+      void SetMaxWheelSpeed(int32_t nMaxWheelSpeed)
+         {
+         m_nMaxWheelSpeed = nMaxWheelSpeed;
+         return;
+         }
+
+      int32_t GetMaxLinearSpeed() const
+         {
+         return (m_nMaxLinearSpeed);
+         }
+
+      void SetMaxLinearSpeed(int32_t nMaxLinearSpeed)
+         {
+         m_nMaxLinearSpeed = nMaxLinearSpeed;
+         return;
+         }
+
+      double GetMaxAngularVelocity() const
+         {
+         return (m_dMaxOmega);
+         }
+
+      void SetMaxAngularVelocity(double dOmega)
+         {
+         m_dMaxOmega = dOmega;
+         return;
+         }
+
+      // Clamp to the requested wheel speed to the allowed range.
+      int32_t ClampWheelSpeed(int32_t nSpeed) const
+         {
+         return (boost::algorithm::clamp(nSpeed, -m_nMaxWheelSpeed, m_nMaxWheelSpeed));
+         }
+
+      // Clamp to the requested linear speed to the allowed range.
+      int32_t ClampLinearSpeed(int32_t nSpeed) const
+         {
+         return (boost::algorithm::clamp(nSpeed, -m_nMaxLinearSpeed, m_nMaxLinearSpeed));
+         }
+
+      // Clamp the angular velocity
+      double ClampAngularVelocity(double dOmega) const
+         {
+         return (boost::algorithm::clamp(dOmega, -m_dMaxOmega, m_dMaxOmega));
+         }
 
       // Handy math constants
       static constexpr double dPi = 3.14159265358979323846;

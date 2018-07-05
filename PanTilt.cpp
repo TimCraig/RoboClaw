@@ -128,8 +128,8 @@ bool DPanTilt::MoveToCnt(int32_t nPan, int32_t nTilt, int32_t nSpeed,
    if (dDiag != 0.0)
       {
       // dDiag will be zero ONLY if BOTH nPan and nTile are zero
-      int32_t nPanSpeed = (nPan / dDiag) * nSpeed;
-      int32_t nTiltSpeed = (nTilt / dDiag) * nSpeed;
+      int32_t nPanSpeed = static_cast<int32_t>((nPan / dDiag) * nSpeed);
+      int32_t nTiltSpeed = static_cast<int32_t>((nTilt / dDiag) * nSpeed);
 
       bRet = MoveToCnt(nPan, nPanSpeed, nTilt, nTiltSpeed, bImmediate);
       } // end if
