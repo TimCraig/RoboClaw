@@ -543,13 +543,13 @@ class DPanTilt : public DRoboClawFS
             double m_dRadPerCnt;
 
             // Angle limits in encoder counts
-            int32_t m_nMin = {0};
-            int32_t m_nMax = {0};
+            int32_t m_nMin{0};
+            int32_t m_nMax{0};
 
             // Default speed, acceleration, and decelration values
-            int32_t m_nDefaultSpeed = {0};
-            uint32_t m_uDefaultAccel = {0};
-            uint32_t m_uDefaultDecel = {0};
+            int32_t m_nDefaultSpeed{0};
+            uint32_t m_uDefaultAccel{0};
+            uint32_t m_uDefaultDecel{0};
          }; // end of class AxisParameters
 
       AxisParameters m_Parms[2];

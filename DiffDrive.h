@@ -99,10 +99,10 @@ class DDiffDrive : public DRoboClawFS
 
             MotorMotionParams& operator=(MotorMotionParams&& rhs) = default;
 
-            int32_t m_nSpeed = {0};
-            uint32_t m_uAccel = {0};
-            uint32_t m_uDecel = {0};
-            uint32_t m_uDistance = {0};
+            int32_t m_nSpeed{0};
+            uint32_t m_uAccel{0};
+            uint32_t m_uDecel{0};
+            uint32_t m_uDistance{0};
          }; // end of class MotorMotionParams
 
       /*****************************************************************************
